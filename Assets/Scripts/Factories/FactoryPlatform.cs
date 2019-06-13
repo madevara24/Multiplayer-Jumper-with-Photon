@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using BlitheFramework;
+using Photon.Pun;
 
 public class FactoryPlatform: BaseClass
 {
@@ -22,10 +23,10 @@ public class FactoryPlatform: BaseClass
     public void Add(GameObject _object, Vector3 _position, Quaternion _rotation, float _speed)
     {
         Platform platform = new Platform();
-        platform = Instantiate(_object, _position, _rotation).AddComponent<Platform>() as Platform;
+        platform = PhotonNetwork.Instantiate(_object.name, _position, _rotation).GetComponent<Platform>() as Platform;
         platform.Init(_speed);
         #region EVENT_LISTENER_ADD_Platform
-        platform.GetComponent<Platform>().EVENT_REMOVE += Remove;
+        platform.EVENT_REMOVE += Remove;
         #endregion EVENT_LISTENER_ADD_Platform
         listOfObjetFactories.Add(platform);
     }
@@ -49,7 +50,7 @@ public class FactoryPlatform: BaseClass
         #region EVENT_LISTENER_REMOVE_Platform
         sender.GetComponent<Platform>().EVENT_REMOVE -= Remove;
         #endregion EVENT_LISTENER_REMOVE_Platform
-        Destroy(sender);
+        PhotonNetwork.Destroy(sender);
     }
     #endregion EVENT_LISTENER_METHOD
     private void RemoveAllObjectFactories()

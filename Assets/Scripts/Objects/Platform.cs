@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using BlitheFramework;
+using Photon.Pun;
+
 public class Platform : BaseClass
 {
     #region Initialize
@@ -67,9 +69,9 @@ public class Platform : BaseClass
     }
     private void CheckOutOfScreen()
     {
-        if(this.transform.position.y< -5.4f)
+        if(this.transform.position.y < -5.4f)
         {
-            dispatchEvent(EVENT_REMOVE, this.gameObject, EventArgs.Empty);
+            Remove();
         }
     }
     #endregion

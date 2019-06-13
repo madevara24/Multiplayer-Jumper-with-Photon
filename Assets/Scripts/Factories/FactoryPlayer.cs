@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using BlitheFramework;
+using Sepay;
+using Photon.Pun;
 
 public class FactoryPlayer: BaseClass
 {
@@ -19,13 +21,13 @@ public class FactoryPlayer: BaseClass
 
     }
 
-    public void Add(GameObject _object, Vector3 _position, Quaternion _rotation, int _id, bool _isMine)
+    public void Add(GameObject _object, Vector3 _position, Quaternion _rotation, int _id)
     {
         Player player = new Player();
-        player = Instantiate(_object, _position, _rotation).AddComponent<Player>() as Player;
-        player.Init(_id, _isMine);
+        player = PhotonNetwork.Instantiate(_object.name, _position, _rotation, 0).GetComponent<Player>() as Player;
+        player.Init(_id);
         #region EVENT_LISTENER_ADD_Player
-        player.GetComponent<Player>().EVENT_REMOVE += Remove;
+       player.EVENT_REMOVE += Remove;
         #endregion EVENT_LISTENER_ADD_Player
         listOfObjetFactories.Add(player);
     }

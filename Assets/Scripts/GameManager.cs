@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using BlitheFramework;
+using Photon.Pun;
 
 public class GameManager : BaseClass
 {
@@ -18,8 +19,10 @@ public class GameManager : BaseClass
     #endregion Public_field
 
     #region Pivate_field
+    [SerializeField] GameObject canvasGameOver;
     private System.Random random;
     private int timer, nextPlatformSpawnTime;
+    private string endgameStatus;
 
     private const float PLATFORM_SPEED = 0.05f;
     private const int MIN_PLATFORM_SPAWN_TIME = 50;
@@ -37,12 +40,16 @@ public class GameManager : BaseClass
         random = new System.Random();
         timer = nextPlatformSpawnTime = 0;
         CreateFactoryPlayer();
-        //InitPlayers();
+        Debug.Log("GN Start");
         Invoke("InitPlayers", 5);
-        CreateFactoryPlatform();
+        if (PhotonNetwork.IsMasterClient)
+        {
+            CreateFactoryPlatform();
+        }
+        
     }
     #region factory
-    [SerializeField] private GameObject prefabPlayer;
+    [SerializeField] private GameObject[] prefabPlayer;
     FactoryPlayer factoryPlayer;
     private void CreateFactoryPlayer()
     {
@@ -94,8 +101,17 @@ public class GameManager : BaseClass
     #region private method
     private void InitPlayers()
     {
-        factoryPlayer.Add(prefabPlayer, new Vector3(-1, 0), Quaternion.identity, 1, true);
-        factoryPlayer.Add(prefabPlayer, new Vector3(1, 0), Quaternion.identity, 2, false);
+        if (PhotonNetwork.IsMasterClient)
+        {
+            factoryPlayer.Add(prefabPlayer[0], new Vector3(-1, 0), Quaternion.identity, 1);
+            factoryPlayer.Get(factoryPlayer.GetNumberOfObjectFactories() - 1).PlayerTag.SetActive(true);
+        }
+        else
+        {
+            factoryPlayer.Add(prefabPlayer[1], new Vector3(1, 0), Quaternion.identity, 2);
+            Debug.Log("Not Master Client; Number of player : " + factoryPlayer.GetNumberOfObjectFactories());
+            factoryPlayer.Get(factoryPlayer.GetNumberOfObjectFactories() - 1).PlayerTag.SetActive(true);
+        }
     }
     private void SetPlatformSpawnerCounter()
     {
@@ -104,8 +120,7 @@ public class GameManager : BaseClass
     private void SpawnPlatform()
     {
         float xPos = random.Next(-200, 200);
-        //Debug.Log(xPos);
-        factoryPlatform.Add(prefabPlatform, new Vector3(xPos/100, 5.3f), Quaternion.identity, PLATFORM_SPEED);
+        factoryPlatform.Add(prefabPlatform, new Vector3(xPos / 100, 5.3f), Quaternion.identity, PLATFORM_SPEED);
     }
     private void UpdatePlatforms()
     {
@@ -144,12 +159,26 @@ public class GameManager : BaseClass
         {
             if (factoryPlayer.Get(i).transform.position.y < -5.4f)
             {
+                canvasGameOver.SetActive(true);
+                setEndgameMessage(i);
                 return true;
             }
         }
+        canvasGameOver.SetActive(true);
         return false;
     }
 
+    private void setEndgameMessage(int _winner)
+    {
+        if((PhotonNetwork.IsMasterClient && _winner == 0) || (!PhotonNetwork.IsMasterClient && _winner == 1))
+        {
+            endgameStatus = "You Lose";
+        }
+        else
+        {
+            endgameStatus = "You Win";
+        }
+    }
     
     #endregion
     #region public method
@@ -164,9 +193,12 @@ public class GameManager : BaseClass
     {
         if (!CheckEndGame())
         {
-            CheckSpawnTime();
+            if (PhotonNetwork.IsMasterClient)
+            {
+                CheckSpawnTime();
+                UpdatePlatforms();
+            }
             UpdateTimer();
-            UpdatePlatforms();
             UpdatePlayers();
         }
     }
