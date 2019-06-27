@@ -16,17 +16,14 @@ namespace Sepay
         #endregion EVENT
 
         #region Public_field
-
         public bool IsMine { get => isMine; set => isMine = value; }
         public int Id { get => id; set => id = value; }
-        public GameObject PlayerTag { get => playerTag; set => playerTag = value; }
         #endregion Public_field
 
         #region Pivate_field
         private bool isMine;
         private int id;
 
-        [SerializeField] GameObject playerTag;
         [SerializeField] List<Sprite> listOfSpritePlayer = new List<Sprite>();
 
         private SpriteRenderer spriteRenderer;

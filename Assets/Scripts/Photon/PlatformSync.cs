@@ -8,11 +8,14 @@ public class PlatformSync : MonoBehaviourPun, IPunObservable
     public List<MonoBehaviour> localScripts;
     public GameObject[] localObject;
 
+    [SerializeField] GameManager gameManager;
+
     private Vector3 latestPos;
 
     // Start is called before the first frame update
     void Start()
     {
+        gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
         if (photonView.IsMine)
         {
 
@@ -35,6 +38,10 @@ public class PlatformSync : MonoBehaviourPun, IPunObservable
         if (!photonView.IsMine)
         {
             transform.position = Vector2.Lerp(transform.position, latestPos, Time.deltaTime * 5);
+            if (gameManager.Endgame)
+            {
+                Destroy(this);
+            }
         }
     }
 

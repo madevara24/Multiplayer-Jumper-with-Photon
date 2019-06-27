@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using BlitheFramework;
 using Photon.Pun;
+using GooglePlayGames;
+using GooglePlayGames.BasicApi;
 
 public class GameManager : BaseClass
 {
@@ -16,15 +18,18 @@ public class GameManager : BaseClass
     #region Public_field
     public Text text_timer;
     public Button btn_mainButton;
+    public bool Endgame { get => endgame; set => endgame = value; }
+
+    [SerializeField] GameObject canvasEndgame;
+    [SerializeField] Text popUp_Score, popUp_Status;
     #endregion Public_field
 
     #region Pivate_field
-    [SerializeField] GameObject canvasGameOver;
     private System.Random random;
-    private int timer, nextPlatformSpawnTime;
-    private string endgameStatus;
+    private int timer, nextPlatformSpawnTime, score, winner, homeScore, awayScore;
+    private bool endgame;
 
-    private const float PLATFORM_SPEED = 0.05f;
+    private const float PLATFORM_SPEED = 0.03f;
     private const int MIN_PLATFORM_SPAWN_TIME = 50;
     private const int MAX_PLATFORM_SPAWN_TIME = 70;
     #endregion Pivate_field
@@ -39,8 +44,9 @@ public class GameManager : BaseClass
     {
         random = new System.Random();
         timer = nextPlatformSpawnTime = 0;
+        endgame = false;
+        canvasEndgame.SetActive(false);
         CreateFactoryPlayer();
-        Debug.Log("GN Start");
         Invoke("InitPlayers", 5);
         if (PhotonNetwork.IsMasterClient)
         {
@@ -64,6 +70,8 @@ public class GameManager : BaseClass
 
     [SerializeField] private GameObject prefabPlatform;
     FactoryPlatform factoryPlatform;
+
+
     private void CreateFactoryPlatform()
     {
         var go = new GameObject();
@@ -101,16 +109,14 @@ public class GameManager : BaseClass
     #region private method
     private void InitPlayers()
     {
+        score = winner = 0;
         if (PhotonNetwork.IsMasterClient)
         {
-            factoryPlayer.Add(prefabPlayer[0], new Vector3(-1, 0), Quaternion.identity, 1);
-            factoryPlayer.Get(factoryPlayer.GetNumberOfObjectFactories() - 1).PlayerTag.SetActive(true);
+            factoryPlayer.Add(prefabPlayer[0], new Vector3(-1, 4), Quaternion.identity, 1);
         }
         else
         {
-            factoryPlayer.Add(prefabPlayer[1], new Vector3(1, 0), Quaternion.identity, 2);
-            Debug.Log("Not Master Client; Number of player : " + factoryPlayer.GetNumberOfObjectFactories());
-            factoryPlayer.Get(factoryPlayer.GetNumberOfObjectFactories() - 1).PlayerTag.SetActive(true);
+            factoryPlayer.Add(prefabPlayer[1], new Vector3(1, 4), Quaternion.identity, 2);
         }
     }
     private void SetPlatformSpawnerCounter()
@@ -132,7 +138,7 @@ public class GameManager : BaseClass
     private void UpdateTimer()
     {
         timer++;
-        text_timer.text = timer.ToString() + " ; Next Spawn at" + nextPlatformSpawnTime+ "\n"+Input.acceleration;
+        //text_timer.text = timer.ToString() + " ; Next Spawn at" + nextPlatformSpawnTime+ "\n"+Input.acceleration;
     }
 
     private void CheckSpawnTime()
@@ -159,26 +165,90 @@ public class GameManager : BaseClass
         {
             if (factoryPlayer.Get(i).transform.position.y < -5.4f)
             {
-                canvasGameOver.SetActive(true);
-                setEndgameMessage(i);
+                InitEndgame(PhotonNetwork.IsMasterClient ? 2 : 1);
                 return true;
             }
         }
-        canvasGameOver.SetActive(true);
         return false;
     }
 
-    private void setEndgameMessage(int _winner)
+    public void InitEndgame(int _winner)
     {
-        if((PhotonNetwork.IsMasterClient && _winner == 0) || (!PhotonNetwork.IsMasterClient && _winner == 1))
+        if(!endgame)
         {
-            endgameStatus = "You Lose";
+            winner = _winner;
+            endgame = true;
+            if (_winner == 1)
+            {
+                homeScore = score;
+                awayScore = score / 2;
+            }
+            else
+            {
+                homeScore = score / 2;
+                awayScore = score;
+            }
+            ClearAllObjects();
+            InitPopUpEndgame();
+            UpdateLeaderboard();
+        }
+    }
+
+    private void ClearAllObjects()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            for (int i = 0; i < factoryPlatform.GetNumberOfObjectFactories(); i++)
+            {
+                factoryPlatform.Get(i).Remove();
+            }
+        }
+
+        for (int i = 0; i < factoryPlayer.GetNumberOfObjectFactories(); i++)
+        {
+            factoryPlayer.Get(i).Remove();
+        }
+    }
+    private void InitPopUpEndgame()
+    {
+        Debug.Log("winner : " + winner);
+        canvasEndgame.SetActive(true);
+        if (PhotonNetwork.IsMasterClient)
+        {
+            popUp_Score.text = homeScore.ToString();
+            if (winner == 1)
+                popUp_Status.text = "Victory";
+            else
+                popUp_Status.text = "Defeat";
         }
         else
         {
-            endgameStatus = "You Win";
+            popUp_Score.text = awayScore.ToString();
+            if (winner == 2)
+                popUp_Status.text = "Victory";
+            else
+                popUp_Status.text = "Defeat";
         }
     }
+
+    private void UpdateLeaderboard()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            PlayGamesPlatform.Instance.ReportScore(homeScore, GPGSIds.leaderboardScore, (bool success) =>
+             {
+
+             });
+        }
+        else
+        {
+            PlayGamesPlatform.Instance.ReportScore(awayScore, GPGSIds.leaderboardScore, (bool success) =>
+            {
+
+            });
+        }
+    }
+
     
     #endregion
     #region public method
@@ -191,8 +261,9 @@ public class GameManager : BaseClass
     #region update
     public void FixedUpdate()
     {
-        if (!CheckEndGame())
+        if (!endgame)
         {
+            CheckEndGame();
             if (PhotonNetwork.IsMasterClient)
             {
                 CheckSpawnTime();
@@ -200,7 +271,14 @@ public class GameManager : BaseClass
             }
             UpdateTimer();
             UpdatePlayers();
+            score++;
         }
+    }
+
+    public void OnClikContinueButton()
+    {
+        PhotonNetwork.LeaveRoom();
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
     #endregion
 }

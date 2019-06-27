@@ -11,11 +11,14 @@ namespace Sepay
         public List<MonoBehaviour> localScripts;
         public GameObject[] localObject;
 
+        [SerializeField] GameManager gameManager;
+
         private Vector3 latestPos;
 
         // Start is called before the first frame update
         void Start()
         {
+            gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
             if (photonView.IsMine)
             {
 
@@ -38,6 +41,10 @@ namespace Sepay
             if (!photonView.IsMine)
             {
                 transform.position = Vector2.Lerp(transform.position, latestPos, Time.deltaTime * 5);
+                if(transform.position.y < -5.4f)
+                {
+                    gameManager.InitEndgame(PhotonNetwork.IsMasterClient ? 1 : 2);
+                }
             }
         }
 

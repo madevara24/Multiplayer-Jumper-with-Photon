@@ -8,22 +8,25 @@ using Photon.Pun;
 
 public class PhotonLobby : MonoBehaviourPunCallbacks
 {
-
+    GooglePlayGameController googlePlayGameController;
     public static PhotonLobby lobby = null;
-    public GameObject battleButton;
+    [SerializeField] private Button btn_Multiplayer;
 
     // Start is called before the first frame update
     void Start()
     {
+        btn_Multiplayer.interactable = false;
         PhotonNetwork.AutomaticallySyncScene = true;
-        battleButton.SetActive(false);
         PhotonNetwork.ConnectUsingSettings(); //Connect to Photon Server
+
+        //googlePlayGameController = GameObject.Find("GooglePlayController").GetComponent<GooglePlayGameController>();
+        //googlePlayGameController.SignIn();
     }
 
     public override void OnConnectedToMaster()
     {
         Debug.Log("Player Connected to Server");
-        battleButton.SetActive(true);
+        btn_Multiplayer.interactable = true;
     }
 
 
@@ -38,7 +41,7 @@ public class PhotonLobby : MonoBehaviourPunCallbacks
     public void JoinRoom()
     {
         Debug.Log("Joining into the room...");
-        battleButton.SetActive(false);
+        btn_Multiplayer.interactable = false;
 
         PhotonNetwork.JoinRandomRoom();
         Debug.Log("Timeout Started");
